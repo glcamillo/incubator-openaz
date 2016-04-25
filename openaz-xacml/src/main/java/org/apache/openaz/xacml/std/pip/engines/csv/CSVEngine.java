@@ -429,7 +429,7 @@ public class CSVEngine extends StdConfigurableEngine {
                 //
                 // Does it have a value?
                 //
-                String lineValue = line[column];
+                String lineValue = line[column-1];
                 if (lineValue.length() == 0) {
                     return false;
                 }
