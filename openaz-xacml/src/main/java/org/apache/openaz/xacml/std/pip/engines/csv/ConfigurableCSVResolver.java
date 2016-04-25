@@ -279,7 +279,7 @@ public class ConfigurableCSVResolver implements CSVResolver {
             //
             // Does it have a value?
             //
-            String value = line[column];
+            String value = line[column-1];
             if (value.length() == 0) {
                 if (this.logger.isDebugEnabled()) {
                     this.logger.debug("Column " + column + " does not have a value.");
