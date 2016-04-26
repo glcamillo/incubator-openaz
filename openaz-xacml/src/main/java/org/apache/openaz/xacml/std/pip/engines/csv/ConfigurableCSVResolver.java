@@ -273,7 +273,7 @@ public class ConfigurableCSVResolver implements CSVResolver {
             //
             // Sanity check, we should have the required number of columns
             //
-            if (column >= line.length) {
+            if (column > line.length) {
                 return null;
             }
             //
