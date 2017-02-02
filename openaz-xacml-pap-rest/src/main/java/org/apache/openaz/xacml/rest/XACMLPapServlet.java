@@ -30,6 +30,7 @@
  */
 package org.apache.openaz.xacml.rest;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -37,9 +38,12 @@ import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,15 +72,24 @@ import org.apache.openaz.xacml.api.pap.PDP;
 import org.apache.openaz.xacml.api.pap.PDPGroup;
 import org.apache.openaz.xacml.api.pap.PDPPolicy;
 import org.apache.openaz.xacml.api.pap.PDPStatus;
+import org.apache.openaz.xacml.pdp.policy.PolicyDef;
+import org.apache.openaz.xacml.pdp.policy.PolicySet;
+import org.apache.openaz.xacml.pdp.policy.dom.DOMPolicyDef;
+import org.apache.openaz.xacml.std.dom.DOMStructureException;
 import org.apache.openaz.xacml.std.pap.StdPDP;
 import org.apache.openaz.xacml.std.pap.StdPDPGroup;
 import org.apache.openaz.xacml.std.pap.StdPDPItemSetChangeNotifier.StdItemSetChangeListener;
 import org.apache.openaz.xacml.std.pap.StdPDPStatus;
 import org.apache.openaz.xacml.util.FactoryException;
+import org.apache.openaz.xacml.util.XACMLPolicyScanner;
 import org.apache.openaz.xacml.util.XACMLProperties;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
+
+import oasis.names.tc.xacml._3_0.core.schema.wd_17.PolicySetType;
+import oasis.names.tc.xacml._3_0.core.schema.wd_17.PolicyType;
+
 
 /**
  * Servlet implementation class XacmlPapServlet
@@ -399,6 +412,56 @@ public class XACMLPapServlet extends HttpServlet implements StdItemSetChangeList
                 doACGet(request, response, groupId);
                 return;
             }
+            
+            // Code included for the project PEPClientApp
+            // Return the policy
+            String policyContentName = null;
+            policyContentName = request.getParameter("policycontent");
+            logger.info("policycontent=" + policyContentName);
+            if (policyContentName != null) {
+            	if (policyContentName.equalsIgnoreCase("true")) {
+	            	PolicyDef policyDef = null;
+	            	String location = null;
+	            	URI locationURI = null;
+	//            	Object policyObject = null;
+	            	
+	                String policyId = request.getParameter("id");
+	            	
+	//                location = properties.getProperty(policyId + ".file");
+	//            	location = System.getProperty(XACMLProperties., policyId + ".file");
+	                location = "/opt/app/xacml/PAP/pdps/default/pbookstrestrictview.xml";
+	            	logger.info("Location of Policy=" + location);
+	            	if (location == null) {
+	                    String message = "Can't get location of Policy.";
+	                    logger.warn(message);
+	                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, message);
+	                    return;            		
+	            	}           	
+	            	
+	            	locationURI = Paths.get(location).toUri();
+	            	try (InputStream is = Files.newInputStream(Paths.get(location))) {
+	            		try {
+							policyDef = DOMPolicyDef.load(is);
+						} catch (DOMStructureException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+	            	}
+	            	logger.info("Policy=" + policyDef.toString());            	
+	            	
+	                try (InputStream is = new ByteArrayInputStream (policyDef.toString().getBytes()); OutputStream os = response.getOutputStream()) {
+	                    //
+	                    // Return the policy back
+	                    //
+	                    IOUtils.copy(is, os);
+	                    response.setStatus(HttpServletResponse.SC_OK);                	
+	                }
+	                return;
+            	}
+            }
+            // End of code included for the project PEPClientApp: return policy            
+            
+            
             //
             // Get the PDP's ID
             //
@@ -446,6 +509,41 @@ public class XACMLPapServlet extends HttpServlet implements StdItemSetChangeList
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, message);
                 return;
             }
+            
+            	
+            	
+//              policyObject = XACMLPolicyScanner.readPolicy(is);
+//            	XACMLPolicyScanner scanner = new XACMLPolicyScanner(null, null);
+/*                if (policyObject instanceof PolicySetType) {
+                	logger.info("Policy=" + policyContent + " is instantat of policyset: " + ((PolicySetType)policyObject).getDescription());
+                }
+                	
+                } else if (policyObject instanceof PolicyType) {
+                	logger.info("Policy=" + policyContent + " is instantat of policy: " +
+                			((PolicyType)policyObject).getDescription());
+                }
+            	
+                if (policyObject != null) {
+                	
+                }
+                
+            	location = XACMLRestProperties.PROP_ROOTPOLICIES. properties.getProperty(id+".file");
+            	
+                String policyContentId = request.getParameter("id");
+            	//
+                // Get its stream
+                //
+                try (InputStream is = policyContentId.getStream(); OutputStream os = response.getOutputStream()) {
+                    //
+                    // Send the policy back
+                    //
+                    IOUtils.copy(is, os);
+
+                    response.setStatus(HttpServletResponse.SC_OK);            	
+*/
+
+            
+            
             //
             // Which policy do they want?
             //
@@ -456,7 +554,7 @@ public class XACMLPapServlet extends HttpServlet implements StdItemSetChangeList
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, message);
                 return;
             }
-            PDPPolicy policy = group.getPolicy(policyId);
+            PDPPolicy policy = group.getPolicy(policyId);            
             if (policy == null) {
                 String message = "Unknown policy: " + policyId;
                 logger.warn(message);
